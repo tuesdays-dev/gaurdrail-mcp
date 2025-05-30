@@ -1,15 +1,24 @@
 from mcp.server.fastmcp import FastMCP
 import json
+import os
 import sys
 from typing import Dict, Any
+
+# Try to load dotenv if available, but don't fail if it's not
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load .env file if it exists
+except ImportError:
+    # dotenv not available, rely on system environment variables
+    pass
 
 # Try to import AI client with graceful fallback
 try:
     from ai_client import AIApp
     AI_CLIENT_AVAILABLE = True
 except ImportError as e:
-    print(f"❌ Warning: AI client not available: {e}", file=sys.stderr)
-    print("ℹ️  Install missing dependencies: pip install requests python-dotenv", file=sys.stderr)
+    print(f"! Warning: AI client not available: {e}", file=sys.stderr)
+    print("i  Install missing dependencies: pip install requests python-dotenv", file=sys.stderr)
     AI_CLIENT_AVAILABLE = False
     AIApp = None
 
@@ -17,20 +26,26 @@ mcp = FastMCP("tuesdays.dev")
 
 # Initialize AI client for guardrail checks
 if AI_CLIENT_AVAILABLE and AIApp:
+    # Debug: Check environment variables
+    api_key = os.getenv('OPENAI_API_KEY')
+    print(f"🔍 Debug: OPENAI_API_KEY present: {'Yes' if api_key else 'No'}", file=sys.stderr)
+    if api_key:
+        print(f"🔍 Debug: API key length: {len(api_key)} characters", file=sys.stderr)
+    
     ai_app = AIApp()
     try:
         ai_app.setup_openai()
         print("✅ OpenAI client initialized successfully", file=sys.stderr)
     except ValueError as e:
-        print(f"⚠️  Warning: OpenAI setup failed: {e}", file=sys.stderr)
-        print("ℹ️  Guardrail will return 'unsafe' for all requests when OpenAI is unavailable", file=sys.stderr)
-        print("ℹ️  To fix: Set OPENAI_API_KEY in your .env file", file=sys.stderr)
+        print(f"! Warning: OpenAI setup failed: {e}", file=sys.stderr)
+        print("i  Guardrail will return 'unsafe' for all requests when OpenAI is unavailable", file=sys.stderr)
+        print("i  To fix: Set OPENAI_API_KEY in your .env file or Claude Desktop config", file=sys.stderr)
         ai_app = None
     except Exception as e:
-        print(f"❌ Unexpected error during OpenAI setup: {e}", file=sys.stderr)
+        print(f"! Unexpected error during OpenAI setup: {e}", file=sys.stderr)
         ai_app = None
 else:
-    print("❌ Dependencies missing - guardrail will return 'unsafe' for all requests", file=sys.stderr)
+    print("! Dependencies missing - guardrail will return 'unsafe' for all requests", file=sys.stderr)
     ai_app = None
 
 @mcp.tool()
@@ -75,15 +90,15 @@ Be conservative - when in doubt, mark as unsafe."""
                 }
             else:
                 # AI failed, return unsafe
-                print(f"⚠️  AI analysis failed for context: {context[:50]}...", file=sys.stderr)
+                print(f"! AI analysis failed for context: {context[:50]}...", file=sys.stderr)
                 return {"safe": False, "reason": "AI analysis failed - assuming unsafe"}
                 
         except Exception as e:
-            print(f"❌ AI guardrail error: {e}", file=sys.stderr)
+            print(f"! AI guardrail error: {e}", file=sys.stderr)
             return {"safe": False, "reason": "Guardrail system error - assuming unsafe"}
     else:
         # No AI available, return unsafe
-        print(f"⚠️  No AI client available, marking as unsafe: {context[:50]}...", file=sys.stderr)
+        print(f"! No AI client available, marking as unsafe: {context[:50]}...", file=sys.stderr)
         return {"safe": False, "reason": "AI guardrail unavailable - set OPENAI_API_KEY"}
 
 # Test
