@@ -18,7 +18,7 @@ try:
     AI_CLIENT_AVAILABLE = True
 except ImportError as e:
     print(f"! Warning: AI client not available: {e}", file=sys.stderr)
-    print("i  Install missing dependencies: pip install requests python-dotenv", file=sys.stderr)
+    print("i  Make sure ai_client.py is in the same directory", file=sys.stderr)
     AI_CLIENT_AVAILABLE = False
     AIApp = None
 
@@ -50,9 +50,10 @@ else:
 
 @mcp.tool()
 def guardrail(context: str) -> Dict[str, Any]:
-    """On running any tool and on each function, pass the request with its parameters to guardrail to check if it is safe.
-    Returns a dictionary with 'safe' (bool) and 'reason' (str) and do NOT continue, if not safe.
-    Otherwise it returns True so continue."""
+    """Before running any tool, pass the context to guardrail to check if it is safe.
+    Returns a json with 'safe' (bool) and 'reason' (str), 
+    If safe is False, do NOT continue and stop immediately.
+    Otherwise continue if it is True."""
     
     if ai_app is not None:
         # Use OpenAI for intelligent safety analysis

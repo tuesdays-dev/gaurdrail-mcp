@@ -1,8 +1,17 @@
 import json
-import requests
 import os
 from typing import Dict, Any, Optional
 from abc import ABC, abstractmethod
+
+# Try to import requests, fall back to urllib if not available
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    import urllib.request
+    import urllib.parse
+    import urllib.error
+    REQUESTS_AVAILABLE = False
 
 
 class AIClient(ABC):
@@ -43,10 +52,23 @@ class OpenAIClient(AIClient):
         }
         
         try:
-            response = requests.post(self.base_url, headers=headers, json=data)
-            response.raise_for_status()
+            if REQUESTS_AVAILABLE:
+                # Use requests if available
+                response = requests.post(self.base_url, headers=headers, json=data)
+                response.raise_for_status()
+                result = response.json()
+            else:
+                # Fall back to urllib
+                req_data = json.dumps(data).encode('utf-8')
+                request = urllib.request.Request(
+                    self.base_url, 
+                    data=req_data, 
+                    headers=headers
+                )
+                
+                with urllib.request.urlopen(request) as response:
+                    result = json.loads(response.read().decode('utf-8'))
             
-            result = response.json()
             content = result["choices"][0]["message"]["content"]
             
             # Parse the JSON response
@@ -57,7 +79,7 @@ class OpenAIClient(AIClient):
                 "usage": result.get("usage", {})
             }
             
-        except requests.exceptions.RequestException as e:
+        except (requests.exceptions.RequestException if REQUESTS_AVAILABLE else urllib.error.URLError) as e:
             return {"success": False, "error": f"Request error: {str(e)}"}
         except json.JSONDecodeError as e:
             return {"success": False, "error": f"JSON decode error: {str(e)}"}
@@ -86,10 +108,23 @@ class OllamaClient(AIClient):
         }
         
         try:
-            response = requests.post(self.endpoint, json=data)
-            response.raise_for_status()
+            if REQUESTS_AVAILABLE:
+                # Use requests if available
+                response = requests.post(self.endpoint, json=data)
+                response.raise_for_status()
+                result = response.json()
+            else:
+                # Fall back to urllib
+                req_data = json.dumps(data).encode('utf-8')
+                request = urllib.request.Request(
+                    self.endpoint,
+                    data=req_data,
+                    headers={'Content-Type': 'application/json'}
+                )
+                
+                with urllib.request.urlopen(request) as response:
+                    result = json.loads(response.read().decode('utf-8'))
             
-            result = response.json()
             content = result.get("response", "")
             
             # Parse the JSON response
@@ -102,7 +137,7 @@ class OllamaClient(AIClient):
                 "done": result.get("done")
             }
             
-        except requests.exceptions.RequestException as e:
+        except (requests.exceptions.RequestException if REQUESTS_AVAILABLE else urllib.error.URLError) as e:
             return {"success": False, "error": f"Request error: {str(e)}"}
         except json.JSONDecodeError as e:
             return {"success": False, "error": f"JSON decode error: {str(e)}"}

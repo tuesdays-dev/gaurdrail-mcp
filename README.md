@@ -134,9 +134,64 @@ mcp dev main.py
 ```
 
 ### Install in Claude Desktop
-1. Make sure you have [Claude Desktop](https://claude.ai/desktop) installed
-2. Run: `mcp install main.py`
-3. The server will appear as a tool in Claude Desktop
+
+#### Option 1: Direct Python (Recommended)
+```json
+{
+  "mcpServers": {
+    "tuesdays.dev": {
+      "command": "python",
+      "args": [
+        "/path/to/your/guardrail-mcp/main.py"
+      ],
+      "env": {
+        "OPENAI_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+#### Option 2: UV with Requirements
+```json
+{
+  "mcpServers": {
+    "tuesdays.dev": {
+      "command": "/opt/homebrew/bin/uv",
+      "args": [
+        "run",
+        "--with-requirements", "/path/to/your/guardrail-mcp/requirements.txt",
+        "python", "/path/to/your/guardrail-mcp/main.py"
+      ],
+      "env": {
+        "OPENAI_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+#### Option 3: UV Basic (May have dependency issues)
+```json
+{
+  "mcpServers": {
+    "tuesdays.dev": {
+      "command": "/opt/homebrew/bin/uv",
+      "args": [
+        "run",
+        "--with", "mcp[cli]",
+        "mcp", "run",
+        "/path/to/your/guardrail-mcp/main.py"
+      ],
+      "env": {
+        "OPENAI_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+**Note**: Replace `/path/to/your/guardrail-mcp/` with the actual path to your project.
 
 ## Troubleshooting
 
