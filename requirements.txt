@@ -1,1 +1,3 @@
-mcp[cli]
+mcp
+requests
+python-dotenv
